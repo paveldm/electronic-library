@@ -2,6 +2,7 @@
 {% block content %}
 <div class="page-heading">
   <h1>Список книг</h1>
+  <a class="button" href="{{ url_for('create_book') }}">Добавить книгу</a>
 </div>
 <p>Всего книг: {{ books|length }}</p>
 {% if books %}
@@ -13,7 +14,7 @@
     <tbody>
       {% for book in books %}
       <tr>
-        <td>{{ book.title }}</td>
+        <td><a href="{{ url_for('view_book', book_id=book.id) }}">{{ book.title }}</a></td>
         <td>{{ book.author }}</td>
         <td>{{ book.genre }}</td>
         <td>{{ book.year or '—' }}</td>

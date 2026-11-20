@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}{{ book.title }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('index') }}">К списку книг</a>
+<h1>{{ book.title }}</h1>
+<article class="panel detail">
+  <dl class="meta">
+    <div><dt>Автор</dt><dd>{{ book.author }}</dd></div>
+    <div><dt>Издательство</dt><dd>{{ book.publisher or 'Не указано' }}</dd></div>
+    <div><dt>Год издания</dt><dd>{{ book.year or 'Не указан' }}</dd></div>
+    <div><dt>Жанр</dt><dd>{{ book.genre }}</dd></div>
+    <div><dt>Статус чтения</dt><dd>{{ book.status }}</dd></div>
+  </dl>
+  <h2>Описание</h2>
+  <p class="description">{{ book.description or 'Описание не добавлено.' }}</p>
+</article>
+{% endblock %}

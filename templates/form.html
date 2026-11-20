@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Редактирование' if editing else 'Добавление книги' }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('view_book', book_id=book.id) if editing else url_for('index') }}">Назад</a>
+<h1>{{ 'Редактирование книги' if editing else 'Добавить книгу' }}</h1>
+<p class="muted">Поля со звёздочкой обязательны.</p>
+{% if errors %}
+<div class="notice error" role="alert">
+  <ul>{% for error in errors %}<li>{{ error }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+<form class="panel form-panel" method="post">
+  <div class="form-grid">
+    <div class="field full">
+      <label for="title">Название книги *</label>
+      <input id="title" name="title" value="{{ book.title|default('') }}" maxlength="200" required>
+    </div>
+    <div class="field">
+      <label for="author">Автор *</label>
+      <input id="author" name="author" value="{{ book.author|default('') }}" maxlength="150" required>
+    </div>
+    <div class="field">
+      <label for="publisher">Издательство</label>
+      <input id="publisher" name="publisher" value="{{ book.publisher|default('') }}" maxlength="150">
+    </div>
+    <div class="field">
+      <label for="year">Год издания</label>
+      <input id="year" name="year" type="number" min="1" max="2100"
+             value="{{ book.year if book.year is defined and book.year is not none else '' }}">
+    </div>
+    <div class="field">
+      <label for="genre">Жанр *</label>
+      <select id="genre" name="genre" required>
+        {% for genre in genres %}
+        <option value="{{ genre }}" {% if book.genre == genre %}selected{% endif %}>{{ genre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label for="status">Статус чтения *</label>
+      <select id="status" name="status" required>
+        {% for status in statuses %}
+        <option value="{{ status }}" {% if book.status == status %}selected{% endif %}>{{ status }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field full">
+      <label for="description">Описание</label>
+      <textarea id="description" name="description" maxlength="3000" rows="4">{{ book.description|default('') }}</textarea>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="button" type="submit">{{ 'Сохранить изменения' if editing else 'Добавить книгу' }}</button>
+    <a class="button secondary" href="{{ url_for('view_book', book_id=book.id) if editing else url_for('index') }}">Отмена</a>
+  </div>
+</form>
+{% endblock %}
