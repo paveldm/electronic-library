@@ -92,6 +92,36 @@ def create_app(test_config=None):
     def view_book(book_id):
         return render_template('detail.html', book=get_book(book_id))
 
+    @app.route('/books/<int:book_id>/edit', methods=['GET', 'POST'])
+    def edit_book(book_id):
+        book = dict(get_book(book_id))
+        errors = []
+        if request.method == 'POST':
+            book, errors = read_form()
+            book['id'] = book_id
+            if not errors:
+                db = get_db()
+                db.execute(
+                    'UPDATE books SET title=?, author=?, publisher=?, year=?, genre=?, '
+                    'status=?, description=? WHERE id=?',
+                    (book['title'], book['author'], book['publisher'],
+                     int(book['year']) if book['year'] else None,
+                     book['genre'], book['status'], book['description'], book_id),
+                )
+                db.commit()
+                return redirect(url_for('view_book', book_id=book_id))
+        return render_template('form.html', book=book, errors=errors, editing=True, genres=GENRES, statuses=STATUSES), (400 if errors else 200)
+
+    @app.route('/books/<int:book_id>/delete', methods=['GET', 'POST'])
+    def delete_book(book_id):
+        book = get_book(book_id)
+        if request.method == 'POST':
+            db = get_db()
+            db.execute('DELETE FROM books WHERE id=?', (book_id,))
+            db.commit()
+            return redirect(url_for('index'))
+        return render_template('delete.html', book=book)
+
     return app
 
 app = create_app()
