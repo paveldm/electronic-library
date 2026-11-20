@@ -13,5 +13,9 @@
   </dl>
   <h2>Описание</h2>
   <p class="description">{{ book.description or 'Описание не добавлено.' }}</p>
+  <div class="actions">
+    <a class="button" href="{{ url_for('edit_book', book_id=book.id) }}">Редактировать</a>
+    <a class="button secondary" href="{{ url_for('delete_book', book_id=book.id) }}">Удалить</a>
+  </div>
 </article>
 {% endblock %}

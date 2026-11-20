@@ -1,7 +1,8 @@
 import os
+import secrets
 import sqlite3
 from pathlib import Path
-from flask import Flask, abort, current_app, g, redirect, render_template, request, url_for
+from flask import Flask, abort, current_app, flash, g, redirect, render_template, request, session, url_for
 
 GENRES = ('Роман', 'Фантастика', 'Детектив', 'Научная литература', 'Учебная литература', 'Другое')
 STATUSES = ('Не прочитана', 'Читаю', 'Прочитана')
@@ -38,10 +39,22 @@ def read_form():
                 raise ValueError
         except ValueError:
             errors.append('Год должен быть целым числом от 1 до 2100.')
+    for name, label, limit in (
+        ('title', 'Название', 200), ('author', 'Автор', 150),
+        ('publisher', 'Издательство', 150), ('description', 'Описание', 3000),
+    ):
+        if len(book[name]) > limit:
+            errors.append(f'{label}: допустимо не более {limit} символов.')
     return book, errors
 
 def create_app(test_config=None):
     app = Flask(__name__)
+    app.config.update(
+        SECRET_KEY=os.environ.get('SECRET_KEY') or secrets.token_hex(32),
+        MAX_CONTENT_LENGTH=64 * 1024,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE='Lax',
+    )
     app.config['DATABASE'] = os.environ.get(
         'DATABASE_PATH', str(Path(app.instance_path) / 'library.db')
     )
@@ -64,6 +77,35 @@ def create_app(test_config=None):
         )''')
         db.commit()
 
+    @app.context_processor
+    def form_token():
+        if 'csrf_token' not in session:
+            session['csrf_token'] = secrets.token_hex(32)
+        return {'csrf_token': session['csrf_token']}
+
+    @app.before_request
+    def check_form_token():
+        if request.method == 'POST':
+            expected = session.get('csrf_token', '')
+            received = request.form.get('csrf_token', '')
+            if not expected or not secrets.compare_digest(expected.encode(), received.encode()):
+                abort(400)
+
+    @app.errorhandler(404)
+    def not_found(error):
+        return render_template('error.html', title='Книга или страница не найдена',
+                               message='Возможно, запись уже удалена. Вернитесь к списку книг.'), 404
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return render_template('error.html', title='Не удалось отправить форму',
+                               message='Откройте форму заново и повторите действие.'), 400
+
+    @app.errorhandler(413)
+    def too_large(error):
+        return render_template('error.html', title='Слишком большой запрос',
+                               message='Сократите текст и отправьте форму ещё раз.'), 413
+
     @app.get('/')
     def index():
         books = get_db().execute('SELECT * FROM books ORDER BY id DESC').fetchall()
@@ -85,12 +127,47 @@ def create_app(test_config=None):
                      book['genre'], book['status'], book['description']),
                 )
                 db.commit()
+                flash('Книга добавлена в библиотеку.')
                 return redirect(url_for('view_book', book_id=cursor.lastrowid))
-        return render_template('form.html', book=book, errors=errors, editing=False, genres=GENRES, statuses=STATUSES), (400 if errors else 200)
+        return render_template('form.html', book=book, errors=errors, editing=False,
+                               genres=GENRES, statuses=STATUSES), (400 if errors else 200)
 
     @app.get('/books/<int:book_id>')
     def view_book(book_id):
         return render_template('detail.html', book=get_book(book_id))
+
+    @app.route('/books/<int:book_id>/edit', methods=['GET', 'POST'])
+    def edit_book(book_id):
+        book = dict(get_book(book_id))
+        errors = []
+        if request.method == 'POST':
+            book, errors = read_form()
+            book['id'] = book_id
+            if not errors:
+                db = get_db()
+                db.execute(
+                    'UPDATE books SET title=?, author=?, publisher=?, year=?, genre=?, '
+                    'status=?, description=? WHERE id=?',
+                    (book['title'], book['author'], book['publisher'],
+                     int(book['year']) if book['year'] else None,
+                     book['genre'], book['status'], book['description'], book_id),
+                )
+                db.commit()
+                flash('Изменения сохранены.')
+                return redirect(url_for('view_book', book_id=book_id))
+        return render_template('form.html', book=book, errors=errors, editing=True,
+                               genres=GENRES, statuses=STATUSES), (400 if errors else 200)
+
+    @app.route('/books/<int:book_id>/delete', methods=['GET', 'POST'])
+    def delete_book(book_id):
+        book = get_book(book_id)
+        if request.method == 'POST':
+            db = get_db()
+            db.execute('DELETE FROM books WHERE id=?', (book_id,))
+            db.commit()
+            flash('Книга удалена из библиотеки.')
+            return redirect(url_for('index'))
+        return render_template('delete.html', book=book)
 
     return app
 

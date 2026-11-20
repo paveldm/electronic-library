@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Удаление книги{% endblock %}
+{% block content %}
+<h1>Удалить книгу?</h1>
+<section class="panel detail">
+  <p><strong>{{ book.title }}</strong> — {{ book.author }}</p>
+  <p>Запись будет удалена из библиотеки.</p>
+  <form method="post" class="actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="button danger" type="submit">Удалить книгу</button>
+    <a class="button secondary" href="{{ url_for('view_book', book_id=book.id) }}">Отмена</a>
+  </form>
+</section>
+{% endblock %}
