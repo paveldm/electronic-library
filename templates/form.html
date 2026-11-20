@@ -10,6 +10,7 @@
 </div>
 {% endif %}
 <form class="panel form-panel" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <div class="form-grid">
     <div class="field full">
       <label for="title">Название книги *</label>

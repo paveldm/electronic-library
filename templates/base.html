@@ -11,6 +11,9 @@
     <a class="brand" href="{{ url_for('index') }}">Электронная библиотека</a>
   </header>
   <main class="container">
+    {% for message in get_flashed_messages() %}
+      <div class="notice" role="status">{{ message }}</div>
+    {% endfor %}
     {% block content %}{% endblock %}
   </main>
 </body>
