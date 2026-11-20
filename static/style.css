@@ -1,0 +1,53 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: #f5f5f5;
+  color: #222;
+  font: 16px Arial, sans-serif;
+  line-height: 1.5;
+}
+a { color: #245a91; }
+.site-header { background: #fff; border-bottom: 1px solid #ccc; padding: 14px 24px; }
+.brand { font-size: 22px; font-weight: bold; text-decoration: none; color: #222; }
+.container { max-width: 1050px; margin: 24px auto; padding: 0 16px; }
+h1 { font-size: 26px; margin: 12px 0; }
+h2 { font-size: 20px; }
+.page-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.muted, .hint, dt { color: #555; }
+.hint { font-size: 14px; }
+.panel { background: #fff; border: 1px solid #ccc; }
+.detail, .form-panel, .empty { padding: 20px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+th { background: #eee; }
+td { overflow-wrap: anywhere; }
+.row-actions { display: flex; gap: 12px; }
+.button {
+  display: inline-block;
+  padding: 7px 12px;
+  border: 1px solid #245a91;
+  border-radius: 3px;
+  background: #245a91;
+  color: white;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.secondary { background: white; color: #245a91; }
+.danger { background: #a02c2c; border-color: #a02c2c; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.full { grid-column: 1 / -1; }
+input, select, textarea { width: 100%; padding: 8px; border: 1px solid #999; border-radius: 3px; font: inherit; }
+textarea { resize: vertical; }
+.meta { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+dd { margin: 3px 0 0; }
+.description { white-space: pre-wrap; overflow-wrap: anywhere; }
+.notice { padding: 10px; margin-bottom: 14px; background: #eaf4e8; border: 1px solid #9ab595; }
+.error { background: #fceeee; border-color: #c99; }
+@media (max-width: 650px) {
+  .page-heading { align-items: flex-start; flex-direction: column; }
+  .form-grid, .meta { grid-template-columns: 1fr; }
+}
