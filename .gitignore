@@ -6,3 +6,4 @@ instance/
 *.db-journal
 .env
 .DS_Store
+.venv-ansible/

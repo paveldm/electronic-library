@@ -1,0 +1,17 @@
+[Unit]
+Description=Electronic Library
+After=network.target
+
+[Service]
+User=library
+Group=library
+WorkingDirectory={{ app_dir }}
+EnvironmentFile=/etc/electronic-library.env
+Environment=DATABASE_PATH={{ data_dir }}/library.db
+ExecStart={{ app_dir }}/.venv/bin/gunicorn --workers 1 --bind 0.0.0.0:{{ app_port }} --access-logfile - --error-logfile - app:app
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
