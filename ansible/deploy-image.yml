@@ -1,0 +1,118 @@
+---
+- name: Deploy the Jenkins image to Ubuntu
+  hosts: library
+  become: true
+
+  vars:
+    deploy_dir: /opt/electronic-library-pr5
+    app_port: 8005
+
+  tasks:
+    - name: Check target and inputs from Jenkins
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['distribution'] == 'Ubuntu'
+          - ansible_facts['architecture'] == 'aarch64'
+          - image_ref is defined and image_ref is match('^electronic-library-pr4:[0-9]+$')
+          - git_revision is defined and git_revision is match('^[0-9a-f]{40}$')
+          - image_archive is defined
+
+    - name: Install Docker and Compose on Ubuntu
+      ansible.builtin.apt:
+        name: [docker.io, docker-compose-v2]
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+        lock_timeout: 300
+
+    - name: Start Docker and enable it at boot
+      ansible.builtin.systemd_service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Create deployment directory
+      ansible.builtin.file:
+        path: "{{ deploy_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy image archive from Mac to Ubuntu
+      ansible.builtin.copy:
+        src: "{{ image_archive }}"
+        dest: "{{ deploy_dir }}/image.tar"
+        mode: "0600"
+
+    - name: Load the delivered image
+      ansible.builtin.command:
+        argv: [docker, image, load, --input, "{{ deploy_dir }}/image.tar"]
+
+    - name: Read the revision and architecture of the loaded image
+      ansible.builtin.command:
+        argv:
+          - docker
+          - image
+          - inspect
+          - "{{ image_ref }}"
+      register: inspected
+      changed_when: false
+
+    - name: Verify image before replacing the container
+      vars:
+        img: "{{ (inspected.stdout | from_json)[0] }}"
+      ansible.builtin.assert:
+        that:
+          - img.Os == 'linux' and img.Architecture == 'arm64'
+          - img.Config.Labels['org.opencontainers.image.revision'] == git_revision
+        success_msg: "Verified {{ image_ref }} from Git {{ git_revision }}"
+
+    - name: Create the PR5 Flask secret once
+      ansible.builtin.copy:
+        dest: /etc/electronic-library-pr5.env
+        content: "SECRET_KEY={{ lookup('ansible.builtin.password', '/dev/null', length=64, chars=['ascii_letters', 'digits']) }}\n"
+        owner: root
+        group: root
+        mode: "0600"
+        force: false
+      no_log: true
+
+    - name: Describe the remote container
+      ansible.builtin.copy:
+        dest: "{{ deploy_dir }}/compose.yaml"
+        mode: "0644"
+        content: |
+          services:
+            library:
+              image: "{{ image_ref }}"
+              container_name: electronic-library-pr5
+              ports:
+                - "{{ app_port }}:8000"
+              volumes:
+                - books:/data
+              env_file: /etc/electronic-library-pr5.env
+              restart: unless-stopped
+          volumes:
+            books:
+              name: library-pr5-data
+
+    - name: Start or update the remote container without a registry
+      ansible.builtin.command:
+        cmd: docker compose -p library-pr5 up -d --no-build --pull never
+        chdir: "{{ deploy_dir }}"
+      register: compose
+      changed_when: "'Started' in compose.stderr or 'Created' in compose.stderr or 'Recreated' in compose.stderr"
+
+    - name: Check the library page on Ubuntu
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ app_port }}/"
+        return_content: true
+        status_code: 200
+        use_proxy: false
+      register: page
+      until: (page.status | default(0)) == 200 and 'Список книг' in (page.content | default(''))
+      retries: 12
+      delay: 2
+
+    - name: Show address for the Mac browser
+      ansible.builtin.debug:
+        msg: "Library on Ubuntu: http://{{ ansible_host }}:{{ app_port }}/"
